@@ -72,8 +72,10 @@ Item {
             required property var modelData
             screen: modelData
             readonly property bool tabletBar: root.tablet && screen === root.internalScreen
-            readonly property int rowHeight: Math.max(48, native.barSize)
-            readonly property int navHeight: rowHeight + Style.spacing.sm
+            // Stock height in every mode: touch targets size themselves from the
+            // row instead of the bar growing to fit them.
+            readonly property int rowHeight: native.barSize
+            readonly property int navHeight: rowHeight
             anchors { top: true; left: true; right: true }
             implicitHeight: navHeight
             exclusiveZone: implicitHeight
