@@ -252,11 +252,33 @@ Item {
                     wrapMode: Text.WordWrap
                     color: Color.menu.text; font.pixelSize: Style.font.body; font.family: Style.font.family
                 }
+                Text { text: "Screen rotation"; color: Color.menu.text; font.pixelSize: Style.font.heading; font.family: Style.font.family }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: Style.spacing.controlGap
+                    Repeater {
+                        model: [{label: "Automatic", value: "auto"}, {label: "Off", value: "off"}]
+                        Button {
+                            required property var modelData
+                            text: modelData.label; foreground: Color.menu.text; accent: Color.accent; bordered: true
+                            selected: root.service && root.service.status.rotation === modelData.value
+                            onClicked: root.service.command("rotation", modelData.value)
+                        }
+                    }
+                }
+                Text {
+                    Layout.fillWidth: true; wrapMode: Text.WordWrap
+                    text: root.service && root.service.status.rotationError.length > 0
+                        ? root.service.status.rotationError
+                        : "Automatic turns the screen with gravity in Tablet mode and needs iio-sensor-proxy. The Rotate button turns it by hand on any display."
+                    color: Color.menu.text; font.pixelSize: Style.font.body; font.family: Style.font.family
+                }
                 Text { text: "Touch shortcuts"; color: Color.menu.text; font.pixelSize: Style.font.heading; font.family: Style.font.family }
                 Flow {
                     Layout.fillWidth: true
                     spacing: Style.spacing.controlGap
                     TouchButton { text: "Keyboard"; iconText: "\uf11c"; onClicked: root.service.command("keyboard") }
+                    TouchButton { text: "Rotate"; iconText: "\uf2f1"; onClicked: root.service.command("rotate") }
                     TouchButton { text: "Windows"; iconText: "\uf2d0"; onClicked: root.service.openSwitcher() }
                     TouchButton { text: "Clipboard"; onClicked: { root.service.close(); root.service.run(["omarchy", "menu", "clipboard"]) } }
                     TouchButton { text: "Emoji"; onClicked: { root.service.close(); root.service.run(["omarchy", "menu", "emoji"]) } }
