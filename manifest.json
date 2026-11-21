@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "id": "surface.tablet",
   "name": "Omarchy Tablet",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": "Charles Rivest",
-  "description": "Switch Omarchy between tablet and desktop modes, with a touch launcher, single-app layout, on-screen keyboard and dictation shortcuts.",
+  "description": "Switch Omarchy between tablet and desktop modes, with a touch launcher, single-app layout, on-screen keyboard, screen rotation and dictation shortcuts.",
   "kinds": [
     "bar",
     "service",

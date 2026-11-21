@@ -20,6 +20,7 @@ import struct
 import sys
 import time
 from keyboard_theme import KeyboardTheme, STYLES
+from rotation import Rotation
 
 DEFAULT_FAVORITES = ["chromium", "org.gnome.Nautilus", "com.github.xournalpp.xournalpp",
                      "libreoffice-writer", "YouTube", "org.gnome.Calculator", "murmure", "localsend"]
@@ -85,7 +86,8 @@ class Backend:
         self.state_dir = Path(state_dir or Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "omarchy-tablet")
         self.preferences_path = self.state_dir / "preferences.json"
         self.preferences = {"mode": "auto", "favorites": DEFAULT_FAVORITES.copy(), "layout": "single",
-                            "dictationCommand": ["murmure", "--transcription"], "keyboardStyle": "omarchy", "keyboardActivation": "auto"}
+                            "dictationCommand": ["murmure", "--transcription"], "keyboardStyle": "omarchy", "keyboardActivation": "auto",
+                            "rotation": "auto"}
         if self.preferences_path.exists():
             try:
                 saved = json.loads(self.preferences_path.read_text())
@@ -103,6 +105,8 @@ class Backend:
                 self.preferences["keyboardStyle"] = saved["keyboardStyle"]
             if isinstance(saved.get("keyboardActivation"), str) and saved["keyboardActivation"] in {"auto", "manual"}:
                 self.preferences["keyboardActivation"] = saved["keyboardActivation"]
+            if isinstance(saved.get("rotation"), str) and saved["rotation"] in {"auto", "off"}:
+                self.preferences["rotation"] = saved["rotation"]
             if isinstance(saved.get("favorites"), list):
                 self.preferences["favorites"] = [s for s in saved["favorites"] if isinstance(s, str)]
         self.runtime = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "omarchy-tablet"
@@ -121,6 +125,7 @@ class Backend:
         from layout import SingleApp
         self.layout = SingleApp(self.runtime / "window-lease.json")
         self.dictation_process = None
+        self.rotation = Rotation()
         self.animations = True
         self.next_style_check = 0
         self.next_keyboard_check = 0
@@ -207,6 +212,8 @@ class Backend:
         state["layout"] = self._effective_layout(tablet)
         state.update(
             keyboardAvailable=bool(shutil.which("squeekboard")),
+            rotationAvailable=self.rotation.available(), rotationActive=self.rotation.running,
+            rotationError=self.rotation.error,
             keyboardRunning=self.keyboard_started, error=self.error,
             dictationCommandText=shlex.join(self.preferences["dictationCommand"]),
             dictationAvailable=bool(shutil.which(self.preferences["dictationCommand"][0])),
@@ -286,9 +293,17 @@ class Backend:
                         if attempt == 19:
                             raise
                         time.sleep(0.1)
+        elif action == "rotate":
+            self.rotation.cycle()
+        elif action == "rotation":
+            if not isinstance(value, str) or value not in {"auto", "off"}:
+                raise ValueError("Unknown screen rotation mode")
+            self.preferences["rotation"] = value
+            if value == "off":
+                self.rotation.stop()
         else:
             raise ValueError("Unknown command")
-        if action in {"mode", "layout", "dictationCommand", "favorite", "keyboardStyle", "keyboardActivation"}:
+        if action in {"mode", "layout", "dictationCommand", "favorite", "keyboardStyle", "keyboardActivation", "rotation"}:
             atomic_json(self.preferences_path, self.preferences)
         if action in {"mode", "layout"}:
             self.layout_dirty = True
@@ -334,6 +349,12 @@ class Backend:
             if css != self.keyboard_css_applied and not self.visible():
                 run("systemctl", "--user", "restart", "omarchy-tablet-keyboard.service")
                 self.keyboard_css_applied = css
+        # Rotation belongs to tablet mode: a rotating desktop display would
+        # fight the physical lid, so it stays still there.
+        if state["tablet"] and self.preferences["rotation"] == "auto":
+            self.rotation.start()
+        elif self.rotation.running:
+            self.rotation.stop()
         if self.layout_dirty:
             # Keep dirty on failure: a failed dispatch must be retried.
             self.layout.reconcile(self._effective_layout(state["tablet"]) == "single")
@@ -456,6 +477,7 @@ class Backend:
             try:
                 self.layout.restore()
             finally:
+                self.rotation.stop()
                 self.restore_keyboard()
                 lock.close()
 

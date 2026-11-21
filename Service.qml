@@ -6,7 +6,8 @@ Item {
     id: root
     property var shell: null
     property var manifest: null
-    property var status: ({ mode: "auto", tablet: false, attached: true, keyboardAvailable: false, favorites: [] })
+    property var status: ({ mode: "auto", tablet: false, attached: true, keyboardAvailable: false, favorites: [],
+        rotation: "auto", rotationAvailable: false, rotationActive: false, rotationError: "" })
     property bool keyboardVisible: false
     property bool homeOpen: false
     property string page: "home"

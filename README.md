@@ -45,10 +45,25 @@ This requires the **Quickshell-based Omarchy shell**, its `qs.Commons`/`qs.Ui` c
 | systemd user session, `systemctl`, `systemd-run`, `busctl` | Owned keyboard service and D-Bus control |
 | `gsettings` (`glib2`), desktop schemas | Keyboard accessibility and input-source settings |
 | `gtk-launch` (`gtk3`), `uwsm-app` (`uwsm`) | Launch installed desktop applications |
-| `squeekboard` | Optional for the shell UI; required for the on-screen keyboard |
+| `squeekboard` (`extra`) | Optional for the shell UI; required for the on-screen keyboard. Without it the bar button stays disabled. |
+| `iio-sensor-proxy` (`extra`) | Optional; required for automatic screen rotation |
 | Murmure or another dictation executable | Optional; install and configure separately |
 
-The plugin installs no packages or hardware drivers. Touchscreen, stylus, rotation and suspend support depend on the device's Linux setup. The linux-surface kernel is the development machine's configuration, not a universal requirement. Automatic screen rotation is not implemented by this plugin.
+The plugin installs no packages or hardware drivers. Touchscreen, stylus, rotation and suspend support depend on the device's Linux setup. The linux-surface kernel is the development machine's configuration, not a universal requirement.
+
+## Screen rotation
+
+Rotation needs an accelerometer that Linux already exposes and `iio-sensor-proxy`, which publishes the orientation over D-Bus. Install it and the automatic mode follows the device in Tablet mode only:
+
+```sh
+sudo pacman -S iio-sensor-proxy
+```
+
+Two behaviours are deliberate. Automatic rotation is bound to **Tablet mode**, because a desktop display that turns while the lid is open fights the keyboard and the user. And the panel keeps the mode, scale and position it already had: the backend reads them from the compositor before it asks for a new transform, so a docked external monitor and a scaled panel are left untouched.
+
+Hyprland 0.55 replaced the legacy keyword parser with a Lua one, so `hyprctl keyword` is refused on current releases. This backend calls the Lua API first and keeps the keyword form as the fallback for older compositors. The pointer and the touch devices are rotated with the panel.
+
+Without the sensor nothing is broken: the **Rotate** button turns the internal panel by hand, and the settings page names the missing dependency instead of failing silently. A device whose accelerometer axes do not match its panel can be corrected with `rotation.py --transform 3,0,1,2`, the same permutation iio-hyprland exposes.
 
 ## Install from GitHub
 
